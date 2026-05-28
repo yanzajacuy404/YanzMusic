@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>YanzMusic • by YanzExilent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: radial-gradient(circle at 20% 30%, #0a0f2a, #030617);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background effect */
+        .bg-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 70% 40%, rgba(0, 255, 255, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Container utama */
+        .app-container {
+            max-width: 550px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            padding: 20px 16px 0;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.45);
+            backdrop-filter: blur(12px);
+            padding: 8px 20px;
+            border-radius: 60px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            margin-bottom: 24px;
+        }
+
+        .logo h1 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ff6b6b, #00ffff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo p {
+            font-size: 0.6rem;
+            opacity: 0.7;
+        }
+
+        .menu-icon {
+            background: rgba(0, 255, 255, 0.1);
+            border: none;
+            color: #00ffff;
+            font-size: 1.4rem;
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Main content area */
+        .main-content {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+            border-radius: 32px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        /* Page transisi */
+        .page {
+            display: none;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .page.active-page {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========== MUSIK PAGE (Player) ========== */
+        .player-card {
+            background: rgba(0, 20, 40, 0.6);
+            border-radius: 32px;
+            padding: 28px 20px;
+            text-align: center;
+            border: 1px solid rgba(0, 255, 255, 0.25);
+            margin-bottom: 24px;
+        }
+
+        .song-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+            margin-bottom: 20px;
+            word-break: break-word;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 28px;
+            margin: 20px 0;
+        }
+
+        .ctrl-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .ctrl-btn:active {
+            transform: scale(0.95);
+        }
+
+        .play-pause {
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            width: 70px;
+            height: 70px;
+            font-size: 1.8rem;
+            box-shadow: 0 0 15px rgba(0, 198, 255, 0.5);
+        }
+
+        .loop-btn.active {
+            background: #00ffff;
+            color: #000;
+            box-shadow: 0 0 12px #00ffff;
+        }
+
+        .progress-area {
+            margin-top: 16px;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 6px;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #00c6ff, #00ffff);
+            width: 0%;
+            height: 6px;
+            border-radius: 10px;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 8px;
+        }
+
+        .btn-floating-list {
+            background: rgba(0, 255, 255, 0.12);
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            border-radius: 60px;
+            padding: 14px;
+            width: 100%;
+            font-weight: 600;
+            color: #00ffff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: 0.2s;
+        }
+
+        .btn-floating-list:hover {
+            background: #00ffff;
+            color: #000;
+        }
+
+        /* ========== BOTTOM SHEET (Daftar Lagu) ========== */
+        .bottom-sheet {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            right: 0;
+            background: rgba(8, 18, 32, 0.98);
+            backdrop-filter: blur(20px);
+            border-top-left-radius: 32px;
+            border-top-right-radius: 32px;
+            transition: bottom 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            z-index: 1000;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            border-top: 1px solid #00ffff;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .bottom-sheet.open {
+            bottom: 0;
+        }
+
+        .sheet-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .sheet-header button {
+            background: none;
+            border: none;
+            color: #00ffff;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .sheet-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .song-list-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50px;
+            padding: 12px 18px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .song-list-item:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        /* ========== RATING PAGE ========== */
+        .rating-list {
+            max-height: 220px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .rating-card {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 28px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 12px;
+            font-size: 2rem;
+            justify-content: center;
+            margin: 15px 0;
+            cursor: pointer;
+        }
+
+        .star-rating i {
+            color: #4a4e6b;
+            transition: 0.1s;
+        }
+
+        .star-rating i.active, .star-rating i:hover {
+            color: #ffc107;
+            text-shadow: 0 0 10px #ffc107;
+        }
+
+        .btn-primary {
+            background: linear-gradient(95deg, #00c6ff, #0072ff);
+            border: none;
+            padding: 12px;
+            border-radius: 60px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        /* ========== REQUEST PAGE ========== */
+        .request-form input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 60px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            background: #1a1f3a;
+            color: white;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .request-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 14px;
+            border-radius: 20px;
+            margin-bottom: 8px;
+        }
+
+        /* ========== BOTTOM NAVIGATION ========== */
+        .bottom-nav {
+            position: sticky;
+            bottom: 16px;
+            background: rgba(10, 20, 35, 0.95);
+            backdrop-filter: blur(20px);
+            display: flex;
+            justify-content: space-around;
+            border-radius: 60px;
+            padding: 6px 12px;
+            border: 1px solid rgba(0, 255, 255, 0.4);
+            margin-top: auto;
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            border-radius: 40px;
+            cursor: pointer;
+            color: #aaa;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(95deg, #00c6ff, #0072ff);
+            color: white;
+            box-shadow: 0 0 12px #00c6ff;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #1a1f3a; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #00ffff; border-radius: 10px; }
+
+        /* Loading */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0,255,255,0.3);
+            border-top-color: #00ffff;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px;
+            color: #aaa;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 0.6rem;
+            margin-top: 12px;
+            opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+<div class="bg-effect"></div>
+<div class="app-container">
+    <div class="header">
+        <div class="logo">
+            <h1>YanzMusic</h1>
+            <p>by YanzExilent</p>
+        </div>
+        <button class="menu-icon" id="infoBtn"><i class="fas fa-info-circle"></i></button>
+    </div>
+
+    <div class="main-content">
+        <!-- Halaman Musik -->
+        <div id="musicPage" class="page active-page">
+            <div class="player-card">
+                <div class="song-title" id="currentSongTitle">🎵 Pilih lagu</div>
+                <div class="controls">
+                    <button class="ctrl-btn" id="prevBtn"><i class="fas fa-backward-step"></i></button>
+                    <button class="ctrl-btn play-pause" id="playPauseBtn"><i class="fas fa-play"></i></button>
+                    <button class="ctrl-btn" id="nextBtn"><i class="fas fa-forward-step"></i></button>
+                    <button class="ctrl-btn loop-btn" id="loopBtn"><i class="fas fa-repeat"></i></button>
+                </div>
+                <div class="progress-area">
+                    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+                    <div class="time-info"><span id="currentTime">0:00</span><span id="duration">0:00</span></div>
+                </div>
+            </div>
+            <button class="btn-floating-list" id="openSongListBtn"><i class="fas fa-list-ul"></i> Daftar Lagu</button>
+        </div>
+
+        <!-- Halaman Rating -->
+        <div id="ratingPage" class="page">
+            <h3 style="margin-bottom: 14px;"><i class="fas fa-star" style="color: #ffc107;"></i> Rating Lagu</h3>
+            <div class="rating-list" id="ratingSongList"></div>
+            <div class="rating-card">
+                <div id="ratingSongTitle" style="font-weight: bold;">Pilih lagu di atas</div>
+                <div class="star-rating" id="starRating">
+                    <i class="far fa-star" data-val="1"></i>
+                    <i class="far fa-star" data-val="2"></i>
+                    <i class="far fa-star" data-val="3"></i>
+                    <i class="far fa-star" data-val="4"></i>
+                    <i class="far fa-star" data-val="5"></i>
+                </div>
+                <div id="ratingInfo" style="font-size: 0.8rem;">⭐ Rata-rata: - (0 rating)</div>
+                <button class="btn-primary" id="submitRatingBtn">Kirim Rating</button>
+            </div>
+        </div>
+
+        <!-- Halaman Request -->
+        <div id="requestPage" class="page">
+            <div class="request-form">
+                <h3 style="text-align: center;"><i class="fas fa-paper-plane"></i> Request Lagu</h3>
+                <input type="text" id="reqTitle" placeholder="Judul lagu...">
+                <input type="text" id="reqArtist" placeholder="Artis (opsional)">
+                <button class="btn-primary" id="sendRequestBtn"><i class="fas fa-save"></i> Kirim Request</button>
+            </div>
+            <div style="margin-top: 28px;">
+                <h4><i class="fas fa-history"></i> Request Terbaru</h4>
+                <div id="userRequestsList" style="max-height: 200px; overflow-y: auto; margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active" data-tab="music"><i class="fas fa-music"></i> Musik</div>
+        <div class="nav-item" data-tab="rating"><i class="fas fa-star"></i> Rating</div>
+        <div class="nav-item" data-tab="request"><i class="fas fa-paper-plane"></i> Request</div>
+    </div>
+    <div class="footer"><i class="fas fa-database"></i> Firebase | Rating & Request tersimpan</div>
+</div>
+
+<!-- Bottom Sheet Daftar Lagu -->
+<div id="songBottomSheet" class="bottom-sheet">
+    <div class="sheet-header">
+        <span><i class="fas fa-headphones"></i> Daftar Lagu</span>
+        <button id="closeSheetBtn"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sheet-content" id="sheetSongList"></div>
+</div>
+
+<script>
+    // Firebase Config (SAMA)
+    const firebaseConfig = {
+        apiKey: "AIzaSyD6ypmddeE8s77-LoaAJQ5IQnASSurmsuU",
+        authDomain: "yanzmusic-6aa62.firebaseapp.com",
+        projectId: "yanzmusic-6aa62",
+        storageBucket: "yanzmusic-6aa62.firebasestorage.app",
+        messagingSenderId: "837496836117",
+        appId: "1:837496836117:web:fb5f7fc0561c04879d3e1c"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ==================== MUSIC PLAYER ====================
+    let songs = [], currentIndex = 0, audio = new Audio(), isPlaying = false, loopOne = false;
+    const currentSongTitle = document.getElementById('currentSongTitle');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const loopBtn = document.getElementById('loopBtn');
+    const progressBar = document.getElementById('progressBar');
+    const progressFill = document.getElementById('progressFill');
+    const currentTimeSpan = document.getElementById('currentTime');
+    const durationSpan = document.getElementById('duration');
+
+    function escapeHtml(s) { return s.replace(/[&<>]/g, m=> m=='&'?'&amp;': m=='<'?'&lt;':'&gt;'); }
+    function formatTime(sec) { if(isNaN(sec)) return '0:00'; let m=Math.floor(sec/60), s=Math.floor(sec%60); return `${m}:${s<10?'0':''}${s}`; }
+    function loadSong(idx) {
+        if(!songs.length) return;
+        const song = songs[idx];
+        currentSongTitle.innerText = song.title;
+        audio.src = song.url;
+        audio.load();
+        if(isPlaying) audio.play().catch(e=>console.log(e));
+        updatePlayPauseIcon();
+    }
+    function playCurrent() { audio.play(); isPlaying=true; updatePlayPauseIcon(); }
+    function pauseCurrent() { audio.pause(); isPlaying=false; updatePlayPauseIcon(); }
+    function updatePlayPauseIcon() { playPauseBtn.querySelector('i').className = isPlaying ? 'fas fa-pause' : 'fas fa-play'; }
+    function updateLoopIcon() { loopOne ? loopBtn.classList.add('active') : loopBtn.classList.remove('active'); }
+    audio.addEventListener('timeupdate',()=>{ if(audio.duration){ let p=(audio.currentTime/audio.duration)*100; progressFill.style.width=`${p}%`; currentTimeSpan.innerText=formatTime(audio.currentTime); } });
+    audio.addEventListener('loadedmetadata',()=>{ durationSpan.innerText=formatTime(audio.duration); });
+    audio.addEventListener('ended',()=>{ if(loopOne){ audio.currentTime=0; audio.play(); } else if(songs.length){ currentIndex=(currentIndex+1)%songs.length; loadSong(currentIndex); playCurrent(); } });
+    progressBar.addEventListener('click',(e)=>{ let rect=progressBar.getBoundingClientRect(), per=(e.clientX-rect.left)/rect.width; if(audio.duration) audio.currentTime=per*audio.duration; });
+    playPauseBtn.addEventListener('click',()=>{ if(!songs.length) return; isPlaying?pauseCurrent():playCurrent(); });
+    prevBtn.addEventListener('click',()=>{ if(!songs.length) return; currentIndex=(currentIndex-1+songs.length)%songs.length; loadSong(currentIndex); playCurrent(); });
+    nextBtn.addEventListener('click',()=>{ if(!songs.length) return; currentIndex=(currentIndex+1)%songs.length; loadSong(currentIndex); playCurrent(); });
+    loopBtn.addEventListener('click',()=>{ loopOne=!loopOne; updateLoopIcon(); });
+
+    // Render daftar lagu di bottom sheet
+    function renderSheetSongs() {
+        if(!songs.length) { document.getElementById('sheetSongList').innerHTML='<div class="empty-state">Belum ada lagu</div>'; return; }
+        document.getElementById('sheetSongList').innerHTML = songs.map((s,i)=>`<div class="song-list-item" data-index="${i}"><span><i class="fas fa-music"></i> ${escapeHtml(s.title)}</span><i class="fas fa-play-circle"></i></div>`).join('');
+        document.querySelectorAll('#sheetSongList .song-list-item').forEach(item=>{
+            item.addEventListener('click',()=>{ let idx=parseInt(item.dataset.index); currentIndex=idx; loadSong(currentIndex); playCurrent(); closeBottomSheet(); });
+        });
+    }
+    db.collection("songs").orderBy("createdAt","asc").onSnapshot(snapshot=>{ songs=[]; snapshot.forEach(doc=>{ let d=doc.data(); songs.push({id:doc.id, title:d.title, url:d.url}); }); renderSheetSongs(); if(songs.length && !audio.src){ currentIndex=0; loadSong(0); } });
+
+    // Bottom Sheet Logic
+    const bottomSheet = document.getElementById('songBottomSheet');
+    const openBtn = document.getElementById('openSongListBtn');
+    const closeSheetBtn = document.getElementById('closeSheetBtn');
+    function openBottomSheet() { bottomSheet.classList.add('open'); }
+    function closeBottomSheet() { bottomSheet.classList.remove('open'); }
+    openBtn.addEventListener('click', openBottomSheet);
+    closeSheetBtn.addEventListener('click', closeBottomSheet);
+    document.addEventListener('click', (e) => { if(bottomSheet.classList.contains('open') && !bottomSheet.contains(e.target) && e.target !== openBtn) closeBottomSheet(); });
+
+    // ==================== RATING ====================
+    let selectedSongId = null, selectedRating = 0;
+    const ratingSongList = document.getElementById('ratingSongList');
+    const ratingSongTitleSpan = document.getElementById('ratingSongTitle');
+    const starIcons = document.querySelectorAll('#starRating i');
+    const ratingInfoSpan = document.getElementById('ratingInfo');
+    const submitRatingBtn = document.getElementById('submitRatingBtn');
+
+    function renderRatingList() {
+        if(!songs.length){ ratingSongList.innerHTML='<div class="empty-state">Belum ada lagu</div>'; return; }
+        ratingSongList.innerHTML = songs.map(s=>`<div class="song-list-item" data-id="${s.id}" data-title="${escapeHtml(s.title)}"><span><i class="fas fa-music"></i> ${escapeHtml(s.title)}</span><i class="fas fa-star" style="color:#ffc107;"></i></div>`).join('');
+        document.querySelectorAll('#ratingSongList .song-list-item').forEach(item=>{
+            item.addEventListener('click',()=>{
+                selectedSongId = item.dataset.id;
+                ratingSongTitleSpan.innerText = item.dataset.title;
+                loadRatingForSong(selectedSongId);
+                selectedRating=0;
+                starIcons.forEach(s=>s.className='far fa-star');
+            });
+        });
+    }
+    async function loadRatingForSong(songId){
+        if(!songId) return;
+        const snapshot = await db.collection('ratings').where('songId','==',songId).get();
+        let total=0, count=0;
+        snapshot.forEach(doc=>{ total+=doc.data().rating; count++; });
+        const avg = count ? (total/count).toFixed(1) : 0;
+        ratingInfoSpan.innerHTML = `⭐ Rata-rata: ${avg}/5 (${count} rating)`;
+    }
+    starIcons.forEach(star=>{ star.addEventListener('click',()=>{ selectedRating=parseInt(star.dataset.val); starIcons.forEach((s,i)=>{ if(i<selectedRating) s.className='fas fa-star'; else s.className='far fa-star'; }); }); });
+    submitRatingBtn.addEventListener('click',async()=>{
+        if(!selectedSongId){ alert('Pilih lagu dulu!'); return; }
+        if(selectedRating===0){ alert('Pilih bintang 1-5'); return; }
+        await db.collection('ratings').add({ songId:selectedSongId, rating:selectedRating, createdAt:new Date() });
+        alert('✅ Rating terkirim!');
+        loadRatingForSong(selectedSongId);
+    });
+    db.collection("songs").onSnapshot(()=>{ renderRatingList(); });
+
+    // ==================== REQUEST ====================
+    const reqTitle = document.getElementById('reqTitle'), reqArtist = document.getElementById('reqArtist'), sendRequestBtn = document.getElementById('sendRequestBtn'), userRequestsList = document.getElementById('userRequestsList');
+    sendRequestBtn.addEventListener('click', async()=>{
+        const title = reqTitle.value.trim();
+        if(!title){ alert('Masukkan judul lagu!'); return; }
+        await db.collection('requests').add({ title, artist: reqArtist.value.trim(), status: 'pending', createdAt: new Date() });
+        alert(`✅ Request "${title}" dikirim!`);
+        reqTitle.value = ''; reqArtist.value = '';
+    });
+    db.collection('requests').orderBy('createdAt','desc').onSnapshot(snap=>{
+        if(snap.empty){ userRequestsList.innerHTML = '<div class="empty-state">Belum ada request</div>'; return; }
+        let html = '';
+        snap.forEach(doc=>{ const d=doc.data(); const statusText = d.status==='approved' ? '✅ Disetujui' : '⏳ Menunggu'; html += `<div class="request-item"><strong>🎧 ${escapeHtml(d.title)}</strong> ${d.artist ? `- ${escapeHtml(d.artist)}` : ''}<span style="float:right;">${statusText}</span></div>`; });
+        userRequestsList.innerHTML = html;
+    });
+
+    // ==================== NAVIGASI TAB ====================
+    const musicPage = document.getElementById('musicPage'), ratingPage = document.getElementById('ratingPage'), requestPage = document.getElementById('requestPage');
+    const navItems = document.querySelectorAll('.nav-item');
+    function switchTab(tabId) {
+        musicPage.classList.remove('active-page');
+        ratingPage.classList.remove('active-page');
+        requestPage.classList.remove('active-page');
+        if(tabId === 'music') musicPage.classList.add('active-page');
+        else if(tabId === 'rating') ratingPage.classList.add('active-page');
+        else if(tabId === 'request') requestPage.classList.add('active-page');
+        navItems.forEach(nav => { if(nav.dataset.tab === tabId) nav.classList.add('active'); else nav.classList.remove('active'); });
+    }
+    navItems.forEach(nav => { nav.addEventListener('click', () => switchTab(nav.dataset.tab)); });
+
+    // Info button hanya popup (tidak merusak)
+    document.getElementById('infoBtn').addEventListener('click', () => alert('YanzMusic v2.0 • Data tersimpan di Firebase'));
+</script>
+</body>
+</html>
